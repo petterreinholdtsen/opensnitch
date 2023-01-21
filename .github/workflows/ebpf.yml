@@ -29,20 +29,18 @@ jobs:
         set -e
         set -x
         sudo apt install eatmydata
-        sudo eatmydata apt install wget tar patch clang llvm libelf-dev libzip-dev flex bison libssl-dev bc rsync python3 binutils
-        eatmydata wget --no-verbose https://github.com/torvalds/linux/archive/v5.8.tar.gz
-        eatmydata tar -xf v5.8.tar.gz
+        sudo eatmydata apt install wget tar patch clang llvm libelf-dev libzip-dev flex bison libssl-dev bc rsync python3 binutils linux-headers-generic
 
     - name: Build eBPF module
       run: |
         set -e
         set -x
-        eatmydata patch linux-5.8/tools/lib/bpf/bpf_helpers.h < ebpf_prog/file.patch
-        eatmydata cp ebpf_prog/opensnitch.c ebpf_prog/Makefile linux-5.8/samples/bpf
-        cd linux-5.8 && yes "" | eatmydata make oldconfig
-        eatmydata make prepare
-        eatmydata make headers_install
-        cd samples/bpf
-        eatmydata make
+        cd ebpf_prog
+        for d in /usr/src/linux-headers-*/include/ \
+           /usr/src/linux-headers-*/arch/x86/include \
+           /usr/src/linux-headers-*/arch/x86/include/generated; do \
+            CFLAGS="$CFLAGS -I$d";
+        done
+        eatmydata clang $CFLAGS -o opensnitch.o opensnitch.c
         eatmydata objdump -h opensnitch.o
         eatmydata llvm-strip -g opensnitch.o
